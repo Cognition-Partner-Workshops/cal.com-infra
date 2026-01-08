@@ -1,0 +1,44 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  cdk-performance:
+    runs-on: ubuntu-latest
+    name: CDK Performance Tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Performance Tests
+        run: npm test -- --testPathPattern="tests/performance" --verbose
+
+      - name: Run CDK Synth Performance
+        run: |
+          start_time=$(date +%s%3N)
+          npx cdk synth --quiet
+          end_time=$(date +%s%3N)
+          duration=$((end_time - start_time))
+          echo "CDK Synth Duration: ${duration}ms"
+          if [ $duration -gt 30000 ]; then
+            echo "WARNING: CDK synth took longer than 30 seconds"
+            exit 1
+          fi
