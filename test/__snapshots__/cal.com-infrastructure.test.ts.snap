@@ -1,0 +1,765 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CalComInfrastructureStack Stack Snapshot should match snapshot 1`] = `
+{
+  "Outputs": {
+    "DBCredentialsSecretArn": {
+      "Description": "ARN of the secret containing database credentials",
+      "Export": {
+        "Name": "CalComDBCredentialsSecretArn",
+      },
+      "Value": {
+        "Ref": "CalComDBCredentials830A2F5F",
+      },
+    },
+    "DBCredentialsSecretName": {
+      "Description": "Name of the secret containing database credentials",
+      "Export": {
+        "Name": "CalComDBCredentialsSecretName",
+      },
+      "Value": {
+        "Fn::Join": [
+          "-",
+          [
+            {
+              "Fn::Select": [
+                0,
+                {
+                  "Fn::Split": [
+                    "-",
+                    {
+                      "Fn::Select": [
+                        6,
+                        {
+                          "Fn::Split": [
+                            ":",
+                            {
+                              "Ref": "CalComDBCredentials830A2F5F",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              "Fn::Select": [
+                1,
+                {
+                  "Fn::Split": [
+                    "-",
+                    {
+                      "Fn::Select": [
+                        6,
+                        {
+                          "Fn::Split": [
+                            ":",
+                            {
+                              "Ref": "CalComDBCredentials830A2F5F",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              "Fn::Select": [
+                2,
+                {
+                  "Fn::Split": [
+                    "-",
+                    {
+                      "Fn::Select": [
+                        6,
+                        {
+                          "Fn::Split": [
+                            ":",
+                            {
+                              "Ref": "CalComDBCredentials830A2F5F",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        ],
+      },
+    },
+    "DBEndpoint": {
+      "Description": "Database endpoint address",
+      "Export": {
+        "Name": "CalComDBEndpoint",
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "CalComDatabasePublic2F1921C7",
+          "Endpoint.Address",
+        ],
+      },
+    },
+    "DBName": {
+      "Description": "Database name",
+      "Export": {
+        "Name": "CalComDBName",
+      },
+      "Value": "calcom",
+    },
+    "DBPort": {
+      "Description": "Database port",
+      "Export": {
+        "Name": "CalComDBPort",
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "CalComDatabasePublic2F1921C7",
+          "Endpoint.Port",
+        ],
+      },
+    },
+    "VPCId": {
+      "Description": "VPC ID",
+      "Export": {
+        "Name": "CalComVPCId",
+      },
+      "Value": {
+        "Ref": "CalComVPCC3B26732",
+      },
+    },
+  },
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "CalComDBCredentials830A2F5F": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "GenerateSecretString": {
+          "ExcludePunctuation": true,
+          "GenerateStringKey": "password",
+          "IncludeSpace": false,
+          "PasswordLength": 32,
+          "SecretStringTemplate": "{"username":"calcom_admin"}",
+        },
+        "Name": "calcom-db-credentials",
+      },
+      "Type": "AWS::SecretsManager::Secret",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "CalComDBCredentialsAttachmentA92F760C": {
+      "Properties": {
+        "SecretId": {
+          "Ref": "CalComDBCredentials830A2F5F",
+        },
+        "TargetId": {
+          "Ref": "CalComDatabasePublic2F1921C7",
+        },
+        "TargetType": "AWS::RDS::DBInstance",
+      },
+      "Type": "AWS::SecretsManager::SecretTargetAttachment",
+    },
+    "CalComDBSecurityGroup4AD05549": {
+      "Properties": {
+        "GroupDescription": "Security group for Cal.com RDS PostgreSQL database",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "SecurityGroupIngress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow PostgreSQL access from anywhere",
+            "FromPort": 5432,
+            "IpProtocol": "tcp",
+            "ToPort": 5432,
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "CalComDatabasePublic2F1921C7": {
+      "DeletionPolicy": "Snapshot",
+      "Properties": {
+        "AllocatedStorage": "20",
+        "BackupRetentionPeriod": 7,
+        "CopyTagsToSnapshot": true,
+        "DBInstanceClass": "db.t3.micro",
+        "DBName": "calcom",
+        "DBSubnetGroupName": {
+          "Ref": "CalComDatabasePublicSubnetGroup1B626FC5",
+        },
+        "DeleteAutomatedBackups": true,
+        "DeletionProtection": false,
+        "Engine": "postgres",
+        "EngineVersion": "15",
+        "MasterUserPassword": {
+          "Fn::Join": [
+            "",
+            [
+              "{{resolve:secretsmanager:",
+              {
+                "Ref": "CalComDBCredentials830A2F5F",
+              },
+              ":SecretString:password::}}",
+            ],
+          ],
+        },
+        "MasterUsername": {
+          "Fn::Join": [
+            "",
+            [
+              "{{resolve:secretsmanager:",
+              {
+                "Ref": "CalComDBCredentials830A2F5F",
+              },
+              ":SecretString:username::}}",
+            ],
+          ],
+        },
+        "MaxAllocatedStorage": 100,
+        "MultiAZ": false,
+        "PubliclyAccessible": true,
+        "StorageType": "gp3",
+        "VPCSecurityGroups": [
+          {
+            "Fn::GetAtt": [
+              "CalComDBSecurityGroup4AD05549",
+              "GroupId",
+            ],
+          },
+        ],
+      },
+      "Type": "AWS::RDS::DBInstance",
+      "UpdateReplacePolicy": "Snapshot",
+    },
+    "CalComDatabasePublicSubnetGroup1B626FC5": {
+      "Properties": {
+        "DBSubnetGroupDescription": "Subnet group for CalComDatabasePublic database",
+        "SubnetIds": [
+          {
+            "Ref": "CalComVPCpublicSubnet1SubnetB79372FC",
+          },
+          {
+            "Ref": "CalComVPCpublicSubnet2SubnetF834E712",
+          },
+        ],
+      },
+      "Type": "AWS::RDS::DBSubnetGroup",
+    },
+    "CalComVPCC3B26732": {
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::VPC",
+    },
+    "CalComVPCIGW5B154B2E": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::InternetGateway",
+    },
+    "CalComVPCVPCGWC448AF00": {
+      "Properties": {
+        "InternetGatewayId": {
+          "Ref": "CalComVPCIGW5B154B2E",
+        },
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+    },
+    "CalComVPCisolatedSubnet1RouteTableAssociation58ED03FF": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CalComVPCisolatedSubnet1RouteTableC3078050",
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCisolatedSubnet1Subnet8124D251",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CalComVPCisolatedSubnet1RouteTableC3078050": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/isolatedSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CalComVPCisolatedSubnet1Subnet8124D251": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.4.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "isolated",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Isolated",
+          },
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/isolatedSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CalComVPCisolatedSubnet2RouteTableA02FA2EA": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/isolatedSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CalComVPCisolatedSubnet2RouteTableAssociationDDB62928": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CalComVPCisolatedSubnet2RouteTableA02FA2EA",
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCisolatedSubnet2Subnet6DAA0C4A",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CalComVPCisolatedSubnet2Subnet6DAA0C4A": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.5.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "isolated",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Isolated",
+          },
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/isolatedSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CalComVPCprivateSubnet1DefaultRouteB6853140": {
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "CalComVPCpublicSubnet1NATGatewayA083A283",
+        },
+        "RouteTableId": {
+          "Ref": "CalComVPCprivateSubnet1RouteTable9EBD29A4",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CalComVPCprivateSubnet1RouteTable9EBD29A4": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/privateSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CalComVPCprivateSubnet1RouteTableAssociationA15BD874": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CalComVPCprivateSubnet1RouteTable9EBD29A4",
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCprivateSubnet1Subnet499D9EBE",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CalComVPCprivateSubnet1Subnet499D9EBE": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.2.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "private",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Private",
+          },
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/privateSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CalComVPCprivateSubnet2DefaultRoute64CB3528": {
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "CalComVPCpublicSubnet1NATGatewayA083A283",
+        },
+        "RouteTableId": {
+          "Ref": "CalComVPCprivateSubnet2RouteTable59E9C39C",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CalComVPCprivateSubnet2RouteTable59E9C39C": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/privateSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CalComVPCprivateSubnet2RouteTableAssociation5BFA78BD": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CalComVPCprivateSubnet2RouteTable59E9C39C",
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCprivateSubnet2Subnet5DD900EE",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CalComVPCprivateSubnet2Subnet5DD900EE": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.3.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "private",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Private",
+          },
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/privateSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CalComVPCpublicSubnet1DefaultRoute4A30E1C0": {
+      "DependsOn": [
+        "CalComVPCVPCGWC448AF00",
+      ],
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "CalComVPCIGW5B154B2E",
+        },
+        "RouteTableId": {
+          "Ref": "CalComVPCpublicSubnet1RouteTable8460DB2A",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CalComVPCpublicSubnet1EIP66CF7C33": {
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/publicSubnet1",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::EIP",
+    },
+    "CalComVPCpublicSubnet1NATGatewayA083A283": {
+      "DependsOn": [
+        "CalComVPCpublicSubnet1DefaultRoute4A30E1C0",
+        "CalComVPCpublicSubnet1RouteTableAssociation2164E60C",
+      ],
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "CalComVPCpublicSubnet1EIP66CF7C33",
+            "AllocationId",
+          ],
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCpublicSubnet1SubnetB79372FC",
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/publicSubnet1",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::NatGateway",
+    },
+    "CalComVPCpublicSubnet1RouteTable8460DB2A": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/publicSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CalComVPCpublicSubnet1RouteTableAssociation2164E60C": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CalComVPCpublicSubnet1RouteTable8460DB2A",
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCpublicSubnet1SubnetB79372FC",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CalComVPCpublicSubnet1SubnetB79372FC": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.0.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "public",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Public",
+          },
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/publicSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CalComVPCpublicSubnet2DefaultRoute057F8B1C": {
+      "DependsOn": [
+        "CalComVPCVPCGWC448AF00",
+      ],
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "CalComVPCIGW5B154B2E",
+        },
+        "RouteTableId": {
+          "Ref": "CalComVPCpublicSubnet2RouteTable57836B58",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CalComVPCpublicSubnet2RouteTable57836B58": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/publicSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CalComVPCpublicSubnet2RouteTableAssociation6BA9D6EE": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CalComVPCpublicSubnet2RouteTable57836B58",
+        },
+        "SubnetId": {
+          "Ref": "CalComVPCpublicSubnet2SubnetF834E712",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CalComVPCpublicSubnet2SubnetF834E712": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.1.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "public",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Public",
+          },
+          {
+            "Key": "Name",
+            "Value": "TestStack/CalComVPC/publicSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CalComVPCC3B26732",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
