@@ -5,7 +5,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
-import * as autoscaling from 'aws-cdk-lib/aws-applicationautoscaling';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { CfnOutput } from 'aws-cdk-lib/core';
 
 export class CalComInfrastructureStack extends cdk.Stack {
@@ -108,10 +108,9 @@ export class CalComInfrastructureStack extends cdk.Stack {
       securityGroups: [dbSecurityGroup],
       databaseName: 'calcom',
       credentials: rds.Credentials.fromSecret(dbCredentials),
-      allocatedStorage: 50,
-      maxAllocatedStorage: 200,
+      allocatedStorage: 100,
+      maxAllocatedStorage: 500,
       storageType: rds.StorageType.GP3,
-      iops: 3000,
       backupRetention: cdk.Duration.days(14),
       deleteAutomatedBackups: false,
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
@@ -123,27 +122,18 @@ export class CalComInfrastructureStack extends cdk.Stack {
       monitoringInterval: cdk.Duration.seconds(60),
     });
 
-    const readReplica = new rds.DatabaseInstanceReadReplica(this, 'CalComDatabaseReadReplica', {
-      sourceDatabaseInstance: dbInstance,
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T3,
-        ec2.InstanceSize.MEDIUM
-      ),
-      vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
-      },
-      securityGroups: [dbSecurityGroup],
-      storageType: rds.StorageType.GP3,
-      iops: 3000,
-      publiclyAccessible: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
 
     const cluster = new ecs.Cluster(this, 'CalComCluster', {
       vpc,
       containerInsights: true,
       clusterName: 'calcom-cluster',
+    });
+
+    const ecrRepository = new ecr.Repository(this, 'CalComECRRepository', {
+      repositoryName: 'calcom-app',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      emptyOnDelete: true,
+      imageScanOnPush: true,
     });
 
     const alb = new elbv2.ApplicationLoadBalancer(this, 'CalComALB', {
@@ -159,11 +149,12 @@ export class CalComInfrastructureStack extends cdk.Stack {
       protocol: elbv2.ApplicationProtocol.HTTP,
       targetType: elbv2.TargetType.IP,
       healthCheck: {
-        path: '/api/health',
-        interval: cdk.Duration.seconds(30),
-        timeout: cdk.Duration.seconds(10),
+        path: '/',
+        interval: cdk.Duration.seconds(60),
+        timeout: cdk.Duration.seconds(30),
         healthyThresholdCount: 2,
-        unhealthyThresholdCount: 3,
+        unhealthyThresholdCount: 5,
+        healthyHttpCodes: '200-399',
       },
       deregistrationDelay: cdk.Duration.seconds(30),
     });
@@ -179,8 +170,12 @@ export class CalComInfrastructureStack extends cdk.Stack {
       family: 'calcom-task',
     });
 
+    const dbUsername = dbCredentials.secretValueFromJson('username').unsafeUnwrap();
+    const dbPassword = dbCredentials.secretValueFromJson('password').unsafeUnwrap();
+    const databaseUrl = `postgresql://${dbUsername}:${dbPassword}@${dbInstance.dbInstanceEndpointAddress}:${dbInstance.dbInstanceEndpointPort}/calcom?sslmode=no-verify`;
+
     taskDefinition.addContainer('CalComContainer', {
-      image: ecs.ContainerImage.fromRegistry('calcom/cal.com:latest'),
+      image: ecs.ContainerImage.fromEcrRepository(ecrRepository, 'latest'),
       memoryLimitMiB: 2048,
       cpu: 1024,
       portMappings: [
@@ -193,9 +188,17 @@ export class CalComInfrastructureStack extends cdk.Stack {
         NODE_ENV: 'production',
         NEXT_PUBLIC_WEBAPP_URL: `http://${alb.loadBalancerDnsName}`,
         NEXTAUTH_URL: `http://${alb.loadBalancerDnsName}`,
+        DATABASE_HOST: dbInstance.dbInstanceEndpointAddress,
+        DATABASE_PORT: dbInstance.dbInstanceEndpointPort,
+        DATABASE_NAME: 'calcom',
+        DATABASE_URL: databaseUrl,
+        DATABASE_DIRECT_URL: databaseUrl,
+        NEXTAUTH_SECRET: 'calcom-nextauth-secret-change-in-production',
+        CALENDSO_ENCRYPTION_KEY: 'calcom-encryption-key-change-in-prod',
       },
       secrets: {
-        DATABASE_URL: ecs.Secret.fromSecretsManager(dbCredentials, 'connectionString'),
+        DATABASE_USERNAME: ecs.Secret.fromSecretsManager(dbCredentials, 'username'),
+        DATABASE_PASSWORD: ecs.Secret.fromSecretsManager(dbCredentials, 'password'),
       },
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'calcom',
@@ -205,7 +208,7 @@ export class CalComInfrastructureStack extends cdk.Stack {
     const fargateService = new ecs.FargateService(this, 'CalComService', {
       cluster,
       taskDefinition,
-      desiredCount: 2,
+      desiredCount: 0,
       securityGroups: [appSecurityGroup],
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
@@ -244,67 +247,56 @@ export class CalComInfrastructureStack extends cdk.Stack {
     new CfnOutput(this, 'DBEndpoint', {
       value: dbInstance.dbInstanceEndpointAddress,
       description: 'Primary database endpoint address',
-      exportName: 'CalComDBEndpoint',
-    });
-
-    new CfnOutput(this, 'DBReadReplicaEndpoint', {
-      value: readReplica.dbInstanceEndpointAddress,
-      description: 'Read replica database endpoint address',
-      exportName: 'CalComDBReadReplicaEndpoint',
     });
 
     new CfnOutput(this, 'DBPort', {
       value: dbInstance.dbInstanceEndpointPort,
       description: 'Database port',
-      exportName: 'CalComDBPort',
     });
 
     new CfnOutput(this, 'DBName', {
       value: 'calcom',
       description: 'Database name',
-      exportName: 'CalComDBName',
     });
 
     new CfnOutput(this, 'DBCredentialsSecretArn', {
       value: dbCredentials.secretArn,
       description: 'ARN of the secret containing database credentials',
-      exportName: 'CalComDBCredentialsSecretArn',
     });
 
     new CfnOutput(this, 'DBCredentialsSecretName', {
       value: dbCredentials.secretName,
       description: 'Name of the secret containing database credentials',
-      exportName: 'CalComDBCredentialsSecretName',
     });
 
     new CfnOutput(this, 'VPCId', {
       value: vpc.vpcId,
       description: 'VPC ID',
-      exportName: 'CalComVPCId',
     });
 
     new CfnOutput(this, 'ALBDnsName', {
       value: alb.loadBalancerDnsName,
       description: 'Application Load Balancer DNS name',
-      exportName: 'CalComALBDnsName',
     });
 
     new CfnOutput(this, 'ALBArn', {
       value: alb.loadBalancerArn,
       description: 'Application Load Balancer ARN',
-      exportName: 'CalComALBArn',
     });
 
     new CfnOutput(this, 'ECSClusterArn', {
       value: cluster.clusterArn,
       description: 'ECS Cluster ARN',
-      exportName: 'CalComECSClusterArn',
     });
 
     new CfnOutput(this, 'ECSServiceArn', {
       value: fargateService.serviceArn,
       description: 'ECS Service ARN',
-      exportName: 'CalComECSServiceArn',
+    });
+
+    new CfnOutput(this, 'ECRRepositoryUri', {
+      value: ecrRepository.repositoryUri,
+      description: 'ECR Repository URI for cal.com container images',
     });
   }
 }
