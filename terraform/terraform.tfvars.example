@@ -1,0 +1,15 @@
+aws_region = "us-east-1"
+environment = "dev"
+
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+db_instance_class        = "db.t3.micro"
+db_name                  = "calcom"
+db_username              = "calcom_admin"
+db_allocated_storage     = 20
+db_max_allocated_storage = 100
+db_backup_retention_period = 7
+db_publicly_accessible   = true
+db_multi_az              = false
+db_deletion_protection   = false
