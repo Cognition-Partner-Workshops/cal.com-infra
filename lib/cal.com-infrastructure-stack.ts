@@ -208,7 +208,7 @@ export class CalComInfrastructureStack extends cdk.Stack {
     const fargateService = new ecs.FargateService(this, 'CalComService', {
       cluster,
       taskDefinition,
-      desiredCount: 0,
+      desiredCount: 2,
       securityGroups: [appSecurityGroup],
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
